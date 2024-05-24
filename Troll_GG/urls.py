@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('summoner_tier_graph/<str:summoner_name>/', views.summoner_tier_graph, name='summoner_tier_graph'),
 ]
