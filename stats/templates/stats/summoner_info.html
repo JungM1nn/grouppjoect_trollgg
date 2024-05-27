@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Summoner Info</title>
+</head>
+<body>
+    <h1>Summoner Info</h1>
+    {% if league_info %}
+        <h2>{{ summoner_name }}</h2>
+        {% for entry in league_info %}
+            <p>Queue Type: {{ entry.queueType }}</p>
+            <p>Tier: {{ entry.tier }} {{ entry.rank }}</p>
+            <p>League Points: {{ entry.leaguePoints }}</p>
+            <p>Wins: {{ entry.wins }}</p>
+            <p>Losses: {{ entry.losses }}</p>
+            <hr>
+        {% endfor %}
+    {% else %}
+        <p>No league information available.</p>
+    {% endif %}
+</body>
+</html>

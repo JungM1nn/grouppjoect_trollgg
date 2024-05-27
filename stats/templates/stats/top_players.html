@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Top Players</title>
+</head>
+<body>
+    <h1>Top Players</h1>
+    <ul>
+        {% for player in sorted_players %}
+            <li>{{ player.rank }}위: {{ player.game_name_and_tagline }} - {{ player.queue }} - {{ player.league_points }}점 - {{ player.wins }}승 {{ player.losses }}패 - 승률: {{ player.win_rate }}%</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
