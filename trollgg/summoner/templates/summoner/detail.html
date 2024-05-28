@@ -41,6 +41,11 @@
             text-align: center;
             margin-top: 20px;
         }
+
+        .troll-score {
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -59,6 +64,16 @@
                 </ul>
             </div>
         {% endfor %}
+        {% if troll_score is not None %}
+            <div class="troll-score">
+                <h2>Troll Score: {{ troll_score }}</h2>
+                {% if troll_score >= 50 %}
+                    <p>This player may exhibit troll-like behavior.</p>
+                {% else %}
+                    <p>This player's behavior seems normal.</p>
+                {% endif %}
+            </div>
+        {% endif %}
     {% else %}
         <p>No summoner information found.</p>
     {% endif %}

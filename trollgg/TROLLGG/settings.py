@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # Riot API 키
-RIOT_API_KEY = 'RGAPI-c741d531-c615-4aa9-81b9-dc18ab3e03a2'
+RIOT_API_KEY = 'RGAPI-86979b94-1f00-4b3b-928e-8fcdcb8db206'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-fxe$-(jz3^-@wtsusdb(h=osop!pm*v+j-h9w-=7!1am%b)6j#'
@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'summoner',
     'Accounts',
+    'Troll_identifier',
 ]
 
 MIDDLEWARE = [
