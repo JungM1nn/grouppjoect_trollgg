@@ -1,14 +1,10 @@
-# views.py
 from django.shortcuts import render
-from summoner.forms import SummonerSearchForm
 import requests
 from urllib.parse import quote
 from django.conf import settings
 
 def get_puuid(api_key, riot_id, tag_line):
-    encoded_riot_id = quote(riot_id)
-    encoded_tag_line = quote(tag_line)
-    url_puuid = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{encoded_riot_id}/{encoded_tag_line}?api_key={api_key}"
+    url_puuid = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{riot_id}/{tag_line}?api_key={api_key}"
     response_puuid = requests.get(url_puuid)
 
     if response_puuid.status_code == 200:
@@ -39,71 +35,25 @@ def get_summoner_league_info(api_key, summoner_id):
     else:
         return None
 
-def home(request):
-    if request.method == 'POST':
-        form = SummonerSearchForm(request.POST)
-        if form.is_valid():
-            riot_id_tagline = form.cleaned_data['riot_id_tagline']
-            if '#' in riot_id_tagline:
-                riot_id, tag_line = riot_id_tagline.split('#', 1)
-                api_key = settings.RIOT_API_KEY
-                puuid = get_puuid(api_key, riot_id, tag_line)
-                if puuid:
-                    summoner_id = get_summoner_id(api_key, puuid)
-                    if summoner_id:
-                        summoner_league_info = get_summoner_league_info(api_key, summoner_id)
-                        if summoner_league_info:
-                            summoner_info = []
-                            for entry in summoner_league_info:
-                                queue_type = entry['queueType']
-                                tier = entry['tier']
-                                division = entry['rank']
-                                league_points = entry['leaguePoints']
-                                wins = entry['wins']
-                                losses = entry['losses']
-
-                                total_games = wins + losses
-                                win_rate = (wins / total_games) * 100 if total_games > 0 else 0
-                                tier_rank = f"{tier} {division}"
-
-                                if queue_type == 'RANKED_SOLO_5x5':
-                                    queue_type = '솔로랭크 5x5'
-                                elif queue_type == 'RANKED_FLEX_SR':
-                                    queue_type = '자유랭크 5x5'
-
-                                summoner_name = f"{riot_id}#{tag_line}"
-
-                                summoner_info.append({
-                                    'summoner_name': summoner_name,
-                                    'queue_type': queue_type,
-                                    'tier_rank': tier_rank,
-                                    'league_points': league_points,
-                                    'total_games': total_games,
-                                    'wins': wins,
-                                    'losses': losses,
-                                    'win_rate': win_rate
-                                })
-                            if summoner_info:
-                                return render(request, 'summoner/detail.html', {'summoner': summoner_info})
-            error_message = "검색 결과가 없습니다."
-            return render(request, 'summoner/error.html', {'error_message': error_message})
+def get_recent_matchlist(api_key, puuid):
+    url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?api_key={api_key}'
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        matchlist = response.json()
+        return matchlist
     else:
-        form = SummonerSearchForm()
-    return render(request, 'summoner/home.html', {'form': form})
-
-
-
-def get_recent_matchlist(api_key, summoner_id):
-    url = f'https://kr.api.riotgames.com/lol/match/v4/matchlists/by-account/{summoner_id}?api_key={api_key}'
-    response = requests.get(url, headers={'X-Riot-Token': api_key})
-    response.raise_for_status()
-    return response.json().get('matches', [])
+        return None
 
 def get_match_details(api_key, match_id):
-    url = f'https://kr.api.riotgames.com/lol/match/v4/matches/{match_id}?api_key={api_key}'
-    response = requests.get(url, headers={'X-Riot-Token': api_key})
-    response.raise_for_status()
-    return response.json()
+    url = f'https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        match_details = response.json()
+        return match_details
+    else:
+        return None
 
 def calculate_troll_score(participant_stats, team_stats, match_details):
     kda = (participant_stats['kills'] + participant_stats['assists']) / (participant_stats['deaths'] or 1)
@@ -141,7 +91,7 @@ def calculate_troll_score(participant_stats, team_stats, match_details):
     if inappropriate_items > 2:
         score += 20
     
-    if participant_stats.get('timeSpentDead', 0) / match_details['gameDuration'] > 0.3:
+    if participant_stats.get('timeSpentDead', 0) / match_details['info']['gameDuration'] > 0.3:
         score += 20
 
     return score
@@ -149,24 +99,44 @@ def calculate_troll_score(participant_stats, team_stats, match_details):
 def troll_identifier(request):
     if request.method == 'POST':
         summoner_name = request.POST.get('summoner_name')
+        tagline = request.POST.get('tagline')  
         api_key = settings.RIOT_API_KEY
         try:
-            summoner_id = get_summoner_id(api_key, summoner_name)
-            matchlist = get_recent_matchlist(api_key, summoner_id)
+            puuid = get_puuid(api_key, summoner_name, tagline)
+            if not puuid:
+                message = "Puuid를 가져올 수 없습니다."
+                return render(request, 'troll_result.html', {'message': message})
+            
+            summoner_id = get_summoner_id(api_key, puuid)
+            if not summoner_id:
+                message = "Summoner ID를 가져올 수 없습니다."
+                return render(request, 'troll_result.html', {'message': message})
+            
+            matchlist = get_recent_matchlist(api_key, puuid)
             if not matchlist:
                 message = "매치 리스트를 가져올 수 없습니다."
                 return render(request, 'troll_result.html', {'message': message})
-            recent_match_id = matchlist[0]['gameId']
+            
+            recent_match_id = matchlist[0]
             match_details = get_match_details(api_key, recent_match_id)
-            participant_id = next(p['participantId'] for p in match_details['participantIdentities'] if p['player']['summonerId'] == summoner_id)
-            participant_stats = next(p['stats'] for p in match_details['participants'] if p['participantId'] == participant_id)
-            team_stats = [p['stats'] for p in match_details['participants'] if p['teamId'] == participant_stats['teamId']]
+            participant_stats = next(p for p in match_details['info']['participants'] if p['summonerId'] == summoner_id)
+            team_stats = [p for p in match_details['info']['participants'] if p['teamId'] == participant_stats['teamId']]
             troll_score = calculate_troll_score(participant_stats, team_stats, match_details)
-            if troll_score >= 50:
-                result_message = f"{summoner_name} 님은 트롤일 가능성이 높습니다."
-            else:
-                result_message = f"{summoner_name} 님은 트롤이 아닙니다."
-            return render(request, 'troll_result.html', {'result_message': result_message})
+            league_info = get_summoner_league_info(api_key, summoner_id)
+
+            return render(request, 'troll_result.html', {
+                'troll_score': troll_score, 
+                'summoner': [{
+                    'summoner_name': summoner_name,
+                    'queue_type': league_info[0]['queueType'], 
+                    'tier_rank': f"{league_info[0]['tier']} {league_info[0]['rank']}",
+                    'league_points': league_info[0]['leaguePoints'],
+                    'total_games': league_info[0]['wins'] + league_info[0]['losses'],
+                    'wins': league_info[0]['wins'],
+                    'losses': league_info[0]['losses'],
+                    'win_rate': (league_info[0]['wins'] / (league_info[0]['wins'] + league_info[0]['losses'])) * 100
+                }]
+            })
         except requests.exceptions.RequestException as e:
             error_message = f"API 요청 중 오류 발생: {e}"
             return render(request, 'troll_result.html', {'error_message': error_message})
@@ -175,4 +145,3 @@ def troll_identifier(request):
             return render(request, 'troll_result.html', {'error_message': error_message})
     else:
         return render(request, 'troll_identifier_form.html')
-
