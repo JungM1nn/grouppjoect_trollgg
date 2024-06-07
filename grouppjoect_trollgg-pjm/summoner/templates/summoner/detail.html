@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>검색 결과</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .summoner-info {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .summoner-info ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .summoner-info ul li {
+            margin-bottom: 10px;
+        }
+        .summoner-info ul li:last-child {
+            margin-bottom: 0;
+        }
+        .troll-score {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    {% if summoner %}
+        {% for summoner_data in summoner %}
+            <div class="summoner-info">
+                <h1>{{ summoner_data.summoner_name }}</h1>
+                <ul>
+                    <li><strong>Queue Type:</strong> {{ summoner_data.queue_type }}</li>
+                    <li><strong>Tier/Rank:</strong> {{ summoner_data.tier_rank }}</li>
+                    <li><strong>League Points:</strong> {{ summoner_data.league_points }}</li>
+                    <li><strong>Total Games:</strong> {{ summoner_data.total_games }}</li>
+                    <li><strong>Wins:</strong> {{ summoner_data.wins }}</li>
+                    <li><strong>Losses:</strong> {{ summoner_data.losses }}</li>
+                    <li><strong>Win Rate:</strong> {{ summoner_data.win_rate|floatformat:2 }}%</li>
+                </ul>
+            </div>
+        {% endfor %}
+        <div class="troll-score">
+            {% if troll_score is not None %}
+                <h2>Troll Score: {{ troll_score }}</h2>
+                {% if troll_score >= 50 %}
+                    <p>이 플레이어는 트롤 행동을 할 가능성이 높습니다.</p>
+                {% else %}
+                    <p>이 플레이어의 행동은 정상적인 것으로 보입니다.</p>
+                {% endif %}
+            {% else %}
+                <p>트롤 점수를 계산할 수 없습니다.</p>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>검색 결과가 없습니다.</p>
+    {% endif %}
+    <a href="{% url 'home' %}">다시 검색하기</a>
+</body>
+</html>
